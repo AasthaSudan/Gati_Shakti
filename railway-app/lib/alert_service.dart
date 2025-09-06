@@ -4,20 +4,24 @@ import 'alert_model.dart';
 
 class AlertService {
   final String baseUrl;
-  
+
   AlertService({this.baseUrl = 'https://8f2wld3k-3000.inc1.devtunnels.ms/api'});
 
-  Future<List<AlertModel>> getAlerts() async {
-    try {
-      final response = await http.get(Uri.parse('$baseUrl/alerts'));
-      if (response.statusCode == 200) {
-        final List<dynamic> alertsJson = json.decode(response.body);
-        return alertsJson.map((json) => AlertModel.fromJson(json)).toList();
-      } else {
-        throw Exception('Failed to load alerts: ${response.statusCode}');
+  // Stream for real-time alerts
+  Stream<List<AlertModel>> getAlertsStream() async* {
+    while (true) {
+      try {
+        final response = await http.get(Uri.parse('$baseUrl/alerts'));
+        if (response.statusCode == 200) {
+          final List<dynamic> alertsJson = json.decode(response.body);
+          yield alertsJson.map((json) => AlertModel.fromJson(json)).toList();
+        } else {
+          yield [];
+        }
+      } catch (e) {
+        yield [];
       }
-    } catch (e) {
-      throw Exception('Error fetching alerts: $e');
+      await Future.delayed(const Duration(seconds: 2));
     }
   }
 
@@ -28,7 +32,7 @@ class AlertService {
         headers: {'Content-Type': 'application/json'},
         body: json.encode(alert.toJson()),
       );
-      
+
       if (response.statusCode == 201) {
         return AlertModel.fromJson(json.decode(response.body));
       } else {
@@ -46,7 +50,7 @@ class AlertService {
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'status': status}),
       );
-      
+
       if (response.statusCode == 200) {
         return AlertModel.fromJson(json.decode(response.body));
       } else {
